@@ -1,0 +1,10 @@
+---
+
+vpn_ipsec_global_config: ""
+
+#if you use prometheus to export metrics you can put here the address
+vpn_ipsec_pushgateway_url: []
+
+vpn_ipsec_log_dir: /var/log/vpn-check
+
+vpn_ipsec_connections: []

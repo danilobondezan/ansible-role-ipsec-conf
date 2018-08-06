@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# File managed by ansible role: newoffers-infra/ansible/roles/vpn-ipsec
+
+#
+# Script to check VPN IPSec status for connection: {{ item.name }}
+#
+
+PUSHGW_ENDPOINT="{{ vpn_ipsec_pushgateway_url }}"
+VPN_NAME={{ item.name }}
+VPN_TEST_HOST={{ item.test_host }}
+VPN_TEST_PORT={{ item.test_port }}
+COUNT_DOWN=0
+SINGLE_TEST=0
+
+LOG={{ vpn_ipsec_log_dir }}/ipsec-${VPN_NAME}.log
+
+# Send metrics to Prometheus Pushgateway
+function do_send_metric_up() {
+  # 0 = success
+  # 1 = error
+  # 2 = restarted
+  if [[ $SINGLE_TEST -ne 0 ]]; then return; fi
+  VALUE=$1
+  ENDPOINT="${VPN_TEST_HOST}:${VPN_TEST_PORT}"
+  echo "oms_stg_vpn_up $VALUE" | curl -s --data-binary @- \
+    "${PUSHGW_ENDPOINT}/metrics/job/vpn_check/instance/${VPN_NAME}/endpoint/${ENDPOINT}" &
+}
+
+function do_test_vpn(){
+  echo "==========> [$(date)] - Starting the test";
+	nc -w 1 -vz ${VPN_TEST_HOST} ${VPN_TEST_PORT}
+	if [[ $? -eq 0 ]] ; then
+		echo "==> $(date) - Connection Success";
+    if [[ $SINGLE_TEST -ne 0 ]]; then return; fi
+		do_send_metric_up 0
+		sleep 30;
+	else
+		echo "==> [$(date)] - Connection Error";
+    if [[ $SINGLE_TEST -ne 0 ]]; then return; fi
+		do_send_metric_up 1
+		echo "$(nc -w 1 -vz ${VPN_TEST_HOST} ${VPN_TEST_PORT})";
+    echo "$(sudo ipsec status |grep ${VPN_NAME})";
+    if [[ $COUNT_DOWN -ge 5 ]]; then
+      COUNT_DOWN=0
+      echo "#>>> [$(date)] - RESTARTING"
+  		do_send_metric_up 2
+  		sudo ipsec down ${VPN_NAME} && sudo ipsec up ${VPN_NAME}
+  		nc -w 1 -vz ${VPN_TEST_HOST} ${VPN_TEST_PORT}
+  		sleep 30;
+    else
+      let "COUNT_DOWN++";
+      sleep 1
+    fi
+	fi;
+}
+
+function vpn_test_run_background() {
+  while true; do
+      do_test_vpn |tee -a $LOG;
+  done
+}
+
+case $1 in
+  "check") SINGLE_TEST=1 do_test_vpn ;;
+  "run") vpn_test_run_background;;
+  *) echo "# Invalid option. Try: $0 [check|run]"
+esac

@@ -1,0 +1,24 @@
+# File managed by ansible
+# ipsec general help
+# https://wiki.strongswan.org/projects/strongswan/wiki/IntroductiontostrongSwan
+# https://www.strongswan.org/testing/testresults/ikev2/net2net-psk/
+# https://www.gypthecat.com/ipsec-vpn-host-to-host-on-ubuntu-14-04-with-strongswan
+# ipsec and AWS EIP help
+# https://serverfault.com/questions/699741/strongswan-vpn-tunnel-between-two-aws-instances-wont-connect
+
+# Global config
+
+{% if vpn_ipsec_global_config is defined and vpn_ipsec_global_config != ''  %}
+config setup
+{% for l in vpn_ipsec_global_config.split('\n') %}
+  {{ l }}
+{% endfor %}
+{% endif %}
+
+# Customer's VPN
+{% for conn in vpn_client_connections %}
+conn {{ conn.name }}
+{% for l in conn.config.split('\n') %}
+  {{ l }}
+{% endfor %}
+{% endfor %}

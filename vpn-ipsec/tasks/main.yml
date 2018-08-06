@@ -1,0 +1,73 @@
+---
+# tasks file for vpn-ipsec
+
+- name: Get ec2 facts
+  action: ec2_facts
+
+- name: Enabling ipv4 forwarding
+  sysctl:
+    name: "net.ipv4.ip_forward"
+    value: 1
+    sysctl_set: yes
+    state: present
+    reload: yes
+  when: ipv4_forward == "yes"
+
+- name: Install strongswan and ipsec-tools
+  apt: name="{{ item }}"
+  with_items:
+    - ipsec-tools
+    - strongswan-starter
+
+- name: Configure ipsec.conf
+  template:
+    src: ipsec.conf.j2
+    dest: /etc/ipsec.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: ipsec-restart
+
+- name: Configure ipsec.secrets
+  template:
+    src: ipsec.secrets.j2
+    dest: /etc/ipsec.secrets
+    owner: root
+    group: root
+    mode: 0600
+  notify: ipsec-restart
+
+- name: Create dir dependencies
+  file:
+    state: directory
+    path: "{{ vpn_ipsec_log_dir }}"
+
+- name: debug
+  debug: msg="{{ item.name }}"
+  with_items:
+    - "{{ vpn_client_connections }}"
+
+- name: Create script for test VPN
+  template:
+    src: oms-vpn-ipsec-test
+    dest: "/usr/local/bin/oms-vpn-ipsec-test-{{ item.name }}"
+    mode: 0755
+    owner: root
+    group: root
+  when: item.state == 'present'
+  with_items: "{{ vpn_client_connections }}"
+
+- name: Configure NAT iptables MASQUERADE rule
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    source: "{%- if env == 'staging'-%}
+             {{ vpn_subnet_staging }}
+             {%- elif env == 'prod' -%}
+             {{ vpn_subnet_prod }}
+             {%- endif -%}"
+    destination: "{{ item.subnet }}"
+    jump: MASQUERADE
+  when: item.state == 'present'
+  with_items: "{{ vpn_client_connections }}"
+  tags: iptables
