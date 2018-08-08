@@ -12,6 +12,7 @@ to test VPN endpoints.
 Var File
 ------------
 
+```
 ---
 #if you use prometheus you can set this variable
 vpn_ipsec_pushgateway_url: []
@@ -59,3 +60,4 @@ vpn_client_connections:
         type=tunnel
         leftfirewall=yes
         mobike=no
+```
