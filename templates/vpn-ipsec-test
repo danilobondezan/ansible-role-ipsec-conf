@@ -1,4 +1,4 @@
-#!/bin/bash
+#/bin/bash
 
 # File managed by ansible role: newoffers-infra/ansible/roles/vpn-ipsec
 
@@ -23,7 +23,7 @@ function do_send_metric_up() {
   if [[ $SINGLE_TEST -ne 0 ]]; then return; fi
   VALUE=$1
   ENDPOINT="${VPN_TEST_HOST}:${VPN_TEST_PORT}"
-  echo "oms_stg_vpn_up $VALUE" | curl -s --data-binary @- \
+  echo "stg_vpn_up $VALUE" | curl -s --data-binary @- \
     "${PUSHGW_ENDPOINT}/metrics/job/vpn_check/instance/${VPN_NAME}/endpoint/${ENDPOINT}" &
 }
 
