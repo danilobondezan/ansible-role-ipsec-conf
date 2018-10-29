@@ -1,15 +1,18 @@
 VPN IPSec
 =========
 
-Ansible role to manage VPN IPsec config
+Ansible role to manage VPN IPsec Config with Strongswan
 
-Requirements
+Requirements 
 ------------
+
+Ansible 2.3 or  higher
+
 
 Ansible role to manage IPSec config and it's scripts
 to test VPN endpoints.
 
-Var File
+Example of Var File
 ------------
 
 ```
